@@ -655,6 +655,11 @@ void rd_kafka_toppar_enq_msg (rd_kafka_toppar_t *rktp, rd_kafka_msg_t *rkm) {
                                                      &rktp->rktp_msgq, rkm);
         }
 
+        /* It is possible that this toppar is not currently being served by a broker.
+         * In that case, the leader broker will begin serving this toppar when
+         * RD_KAFKA_OP_PARTITION_JOIN completes. */
+        rd_kafka_broker_batch_toppar_add(rktp->rktp_leader, rktp);
+
         wakeup_fd = rktp->rktp_msgq_wakeup_fd;
         rd_kafka_toppar_unlock(rktp);
 
@@ -827,6 +832,8 @@ int rd_kafka_toppar_retry_msgq (rd_kafka_toppar_t *rktp, rd_kafka_msgq_t *rkmq,
                                 incr_retry, rk->rk_conf.max_retries,
                                 backoff,
                                 rktp->rktp_rkt->rkt_conf.msg_order_cmp);
+
+        rd_kafka_broker_batch_toppar_add(rktp->rktp_leader, rktp);
         rd_kafka_toppar_unlock(rktp);
 
         return r;
@@ -842,6 +849,7 @@ void rd_kafka_toppar_insert_msgq (rd_kafka_toppar_t *rktp,
         rd_kafka_toppar_lock(rktp);
         rd_kafka_msgq_insert_msgq(&rktp->rktp_msgq, rkmq,
                                   rktp->rktp_rkt->rkt_conf.msg_order_cmp);
+        rd_kafka_broker_batch_toppar_add(rktp->rktp_leader, rktp);
         rd_kafka_toppar_unlock(rktp);
 }
 

@@ -60,13 +60,31 @@ static RD_UNUSED void rd_kafka_offset_stats_reset (struct offset_stats *offs) {
  */
 struct rd_kafka_toppar_s { /* rd_kafka_toppar_t */
 	TAILQ_ENTRY(rd_kafka_toppar_s) rktp_rklink;  /* rd_kafka_t link */
-	TAILQ_ENTRY(rd_kafka_toppar_s) rktp_rkblink; /* rd_kafka_broker_t link*/
+	TAILQ_ENTRY(rd_kafka_toppar_s) rktp_rkblink; /* rd_kafka_broker_t link */
+        TAILQ_ENTRY(rd_kafka_toppar_s) rktp_rkb_batch_link; /* rd_kafka_broker_t link for batch produce */
+
+        /* rd_kafka_broker_topic_t link for batch produce.
+         * This is the link for all toppars which have messages to send. */
+        TAILQ_ENTRY(rd_kafka_toppar_s) rktp_rkbt_xmit_batch_link;
+
         CIRCLEQ_ENTRY(rd_kafka_toppar_s) rktp_activelink; /* rkb_active_toppars */
 	TAILQ_ENTRY(rd_kafka_toppar_s) rktp_rktlink; /* rd_kafka_itopic_t link*/
         TAILQ_ENTRY(rd_kafka_toppar_s) rktp_cgrplink;/* rd_kafka_cgrp_t link */
         rd_kafka_itopic_t       *rktp_rkt;
         shptr_rd_kafka_itopic_t *rktp_s_rkt;  /* shared pointer for rktp_rkt */
 	int32_t            rktp_partition;
+
+        /* Track whether rktp_rkb_batch_link is in use. */
+        int32_t            rktp_batch_link_enabled;
+
+        /* Track whether rktp_rkbt_xmit_batch_link is in use. */
+        int32_t            rktp_batch_xmit_link_enabled;
+
+        /* Transient: Whether this toppar is currently producing */
+        int32_t            rktp_producing_batch;
+
+        rd_kafka_broker_topic_t   *rktp_broker_topic;
+
         //LOCK: toppar_lock() + topic_wrlock()
         //LOCK: .. in partition_available()
         int32_t            rktp_leader_id;   /**< Current leader broker id.

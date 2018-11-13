@@ -755,6 +755,10 @@ static const struct rd_kafka_property rd_kafka_properties[] = {
           "at slightly increased CPU usage.",
           0, 1, 0 },
 	/* Global producer properties */
+        { _RK_GLOBAL|_RK_PRODUCER, "produce.request.interval.ms", _RK_C_INT,
+          _RK(produce_request_interval_ms),
+          "Maximum interval between produce requests.",
+          0, 10000000, 0 },
 	{ _RK_GLOBAL|_RK_PRODUCER, "queue.buffering.max.messages", _RK_C_INT,
 	  _RK(queue_buffering_max_msgs),
 	  "Maximum number of messages allowed on the producer queue.",

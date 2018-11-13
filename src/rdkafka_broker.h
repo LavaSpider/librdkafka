@@ -35,6 +35,26 @@
 extern const char *rd_kafka_broker_state_names[];
 extern const char *rd_kafka_secproto_names[];
 
+/* Broker copy of topic which can be filled with toppars which
+ * have work to be done. */
+typedef struct rd_kafka_broker_topic_s {
+        /* All topics assigned to broker. */
+        TAILQ_ENTRY(rd_kafka_broker_topic_s)    rkbt_rkblink;
+
+        /* All topics actively producing messages to the broker. */
+        TAILQ_ENTRY(rd_kafka_broker_topic_s)    rkbt_rkb_xmit_link;
+
+        /* List of all partitions assigned to this topic on
+         * this broker which have data ready to send. */
+        TAILQ_HEAD(, rd_kafka_toppar_s)         rkbt_xmit_toppars;
+
+        /* Tracked topic pointer */
+        rd_kafka_itopic_t                       *rkbt_rkt;
+
+        /* Refcount. Used only within the broker thread. */
+        int                                     rkbt_ref_cnt;
+} rd_kafka_broker_topic_t;
+
 struct rd_kafka_broker_s { /* rd_kafka_broker_t */
 	TAILQ_ENTRY(rd_kafka_broker_s) rkb_link;
 
@@ -65,9 +85,27 @@ struct rd_kafka_broker_s { /* rd_kafka_broker_t */
 	TAILQ_HEAD(, rd_kafka_toppar_s) rkb_toppars;
 	int                 rkb_toppar_cnt;
 
+        /* Toppars which have application messages to send, and have not yet been moved on to
+         * batch production. */
+        TAILQ_HEAD(, rd_kafka_toppar_s) rkb_batch_toppars;
+
+        /* All topics in use by this broker. */
+        TAILQ_HEAD(, rd_kafka_broker_topic_s) rkb_broker_topics;
+
+        /* All topics in use by this broker, which are currently producing message batches. */
+        TAILQ_HEAD(, rd_kafka_broker_topic_s) rkb_xmit_broker_topics;
+
+        /* Count of topics which are currently producing message batches. */
+        int32_t rkb_xmit_topic_cnt;
+
+        /* Count of partitions which are currently producing message batches. */
+        int32_t rkb_active_partition_cnt;
+
+        /* Limit on how frequently to produce a message batch. */
+        rd_interval_t rkb_produce_intvl;
+
         /* Active toppars that are eligible for:
          *  - (consumer) fetching due to underflow
-         *  - (producer) producing
          *
          * The circleq provides round-robin scheduling for both cases.
          */
@@ -381,5 +419,11 @@ void rd_kafka_broker_active_toppar_add (rd_kafka_broker_t *rkb,
 
 void rd_kafka_broker_active_toppar_del (rd_kafka_broker_t *rkb,
                                         rd_kafka_toppar_t *rktp);
+
+void rd_kafka_broker_batch_toppar_add (rd_kafka_broker_t *rkb,
+                                                rd_kafka_toppar_t *rktp);
+
+void rd_kafka_broker_batch_toppar_del (rd_kafka_broker_t *rkb,
+                                                   rd_kafka_toppar_t *rktp);
 
 #endif /* _RDKAFKA_BROKER_H_ */
